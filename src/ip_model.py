@@ -15,17 +15,16 @@ class IP:
     """IP model for IP management"""
     
     def __init__(self, name: str, type_id: int, process_id: int, revision: str = DEFAULT_REVISION,
-                 status: str = DEFAULT_STATUS, provider: str = "",
-                 ip_components: List[Dict[str, Any]] = None, description: str = "",
-                 documentation: str = "", **kwargs):
+                 status: str = DEFAULT_STATUS, provider: str = "", parent_ip_id: int = None,
+                 description: str = "", documentation: str = "", **kwargs):
         self.id = kwargs.get('id')
         self.name = name
         self.type_id = type_id
         self.process_id = process_id
+        self.parent_ip_id = parent_ip_id
         self.revision = revision
         self.status = status
         self.provider = provider
-        self.ip_components = ip_components or []
         self.description = description
         self.documentation = documentation
         self.created_at = kwargs.get('created_at')
@@ -45,7 +44,7 @@ class IP:
             'revision': self.revision,
             'status': self.status,
             'provider': self.provider,
-            'ip_components': json.dumps(self.ip_components) if self.ip_components else None,
+            'parent_ip_id': self.parent_ip_id,
             'description': self.description,
             'documentation': self.documentation,
             'created_at': self.created_at,
@@ -55,12 +54,6 @@ class IP:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'IP':
         """Create IP instance from dictionary"""
-        ip_components = []
-        if data.get('ip_components'):
-            try:
-                ip_components = json.loads(data['ip_components'])
-            except (json.JSONDecodeError, TypeError):
-                ip_components = []
         
         return cls(
             id=data.get('id'),
@@ -70,7 +63,7 @@ class IP:
             revision=data.get('revision', DEFAULT_REVISION),
             status=data.get('status', DEFAULT_STATUS),
             provider=data.get('provider', ''),
-            ip_components=ip_components,
+            parent_ip_id=data.get('parent_ip_id'),
             description=data.get('description', ''),
             documentation=data.get('documentation', ''),
             created_at=data.get('created_at'),
@@ -84,25 +77,23 @@ class IP:
                 # Update existing IP
                 query = """
                 UPDATE ips 
-                SET name = %s, type_id = %s, process_id = %s, revision = %s,
-                    status = %s, provider = %s, ip_components = %s, description = %s,
+                SET name = %s, type_id = %s, process_id = %s, parent_ip_id = %s, revision = %s,
+                    status = %s, provider = %s, description = %s,
                     documentation = %s, updated_at = NOW()
                 WHERE id = %s
                 """
-                params = (self.name, self.type_id, self.process_id, self.revision,
-                         self.status, self.provider, json.dumps(self.ip_components) if self.ip_components else None,
-                         self.description, self.documentation, self.id)
+                params = (self.name, self.type_id, self.process_id, self.parent_ip_id, self.revision,
+                         self.status, self.provider, self.description, self.documentation, self.id)
                 db_manager.execute_update(query, params)
             else:
                 # Insert new IP
                 query = """
-                INSERT INTO ips (name, type_id, process_id, revision, status, provider, 
-                               ip_components, description, documentation)
+                INSERT INTO ips (name, type_id, process_id, parent_ip_id, revision, status, provider, 
+                               description, documentation)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                params = (self.name, self.type_id, self.process_id, self.revision,
-                         self.status, self.provider, json.dumps(self.ip_components) if self.ip_components else None,
-                         self.description, self.documentation)
+                params = (self.name, self.type_id, self.process_id, self.parent_ip_id, self.revision,
+                         self.status, self.provider, self.description, self.documentation)
                 db_manager.execute_update(query, params)
                 # Get the inserted ID
                 result = db_manager.execute_query("SELECT LAST_INSERT_ID() as id")
@@ -209,6 +200,17 @@ class IP:
             logger.error(f"Error finding IPs by provider {provider}: {e}")
             return []
     
+    @classmethod
+    def find_roots(cls) -> List['IP']:
+        """Find all root IPs (IPs without parents)"""
+        try:
+            query = "SELECT * FROM ips WHERE parent_ip_id IS NULL ORDER BY name"
+            result = db_manager.execute_query(query)
+            return [cls.from_dict(row) for row in result]
+        except Exception as e:
+            logger.error(f"Error finding root IPs: {e}")
+            return []
+    
     def get_type(self) -> Optional[Type]:
         """Get the type object for this IP"""
         return Type.find_by_id(self.type_id)
@@ -217,22 +219,61 @@ class IP:
         """Get the process object for this IP"""
         return Process.find_by_id(self.process_id)
     
-    def add_component(self, component: Dict[str, Any]):
-        """Add a component to the IP components list"""
-        if not self.ip_components:
-            self.ip_components = []
-        self.ip_components.append(component)
+    def get_parent(self) -> Optional['IP']:
+        """Get the parent IP object"""
+        if self.parent_ip_id:
+            return IP.find_by_id(self.parent_ip_id)
+        return None
     
-    def remove_component(self, component_name: str) -> bool:
-        """Remove a component from the IP components list"""
-        if not self.ip_components:
+    def get_children(self) -> List['IP']:
+        """Get all child IPs"""
+        try:
+            query = "SELECT * FROM ips WHERE parent_ip_id = %s ORDER BY name"
+            result = db_manager.execute_query(query, (self.id,))
+            return [IP.from_dict(row) for row in result]
+        except Exception as e:
+            logger.error(f"Error finding children for IP {self.name}: {e}")
+            return []
+    
+    def add_child(self, child_ip: 'IP') -> bool:
+        """Add a child IP to this IP"""
+        if not self.id:
+            logger.error("Parent IP must be saved before adding children")
             return False
         
-        for i, component in enumerate(self.ip_components):
-            if component.get('name') == component_name:
-                del self.ip_components[i]
-                return True
-        return False
+        child_ip.parent_ip_id = self.id
+        return child_ip.save()
+    
+    def remove_child(self, child_ip: 'IP') -> bool:
+        """Remove a child IP from this IP"""
+        if child_ip.parent_ip_id != self.id:
+            logger.error(f"IP {child_ip.name} is not a child of {self.name}")
+            return False
+        
+        child_ip.parent_ip_id = None
+        return child_ip.save()
+    
+    def get_all_descendants(self) -> List['IP']:
+        """Get all descendant IPs recursively"""
+        descendants = []
+        children = self.get_children()
+        
+        for child in children:
+            descendants.append(child)
+            descendants.extend(child.get_all_descendants())
+        
+        return descendants
+    
+    def get_root_ancestor(self) -> 'IP':
+        """Get the root ancestor of this IP"""
+        current = self
+        while current.parent_ip_id:
+            parent = current.get_parent()
+            if parent:
+                current = parent
+            else:
+                break
+        return current
     
     def update_status(self, new_status: str) -> bool:
         """Update IP status"""
