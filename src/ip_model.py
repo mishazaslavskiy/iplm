@@ -15,14 +15,13 @@ class IP:
     """IP model for IP management"""
     
     def __init__(self, name: str, type_id: int, process_id: int, revision: str = DEFAULT_REVISION,
-                 status: str = DEFAULT_STATUS, provider: str = "", flavor: str = "",
+                 status: str = DEFAULT_STATUS, provider: str = "",
                  ip_components: List[Dict[str, Any]] = None, description: str = "",
                  documentation: str = "", **kwargs):
         self.id = kwargs.get('id')
         self.name = name
         self.type_id = type_id
         self.process_id = process_id
-        self.flavor = flavor
         self.revision = revision
         self.status = status
         self.provider = provider
@@ -43,7 +42,6 @@ class IP:
             'name': self.name,
             'type_id': self.type_id,
             'process_id': self.process_id,
-            'flavor': self.flavor,
             'revision': self.revision,
             'status': self.status,
             'provider': self.provider,
@@ -69,7 +67,6 @@ class IP:
             name=data['name'],
             type_id=data['type_id'],
             process_id=data['process_id'],
-            flavor=data.get('flavor', ''),
             revision=data.get('revision', DEFAULT_REVISION),
             status=data.get('status', DEFAULT_STATUS),
             provider=data.get('provider', ''),
@@ -87,23 +84,23 @@ class IP:
                 # Update existing IP
                 query = """
                 UPDATE ips 
-                SET name = %s, type_id = %s, process_id = %s, flavor = %s, revision = %s,
+                SET name = %s, type_id = %s, process_id = %s, revision = %s,
                     status = %s, provider = %s, ip_components = %s, description = %s,
                     documentation = %s, updated_at = NOW()
                 WHERE id = %s
                 """
-                params = (self.name, self.type_id, self.process_id, self.flavor, self.revision,
+                params = (self.name, self.type_id, self.process_id, self.revision,
                          self.status, self.provider, json.dumps(self.ip_components) if self.ip_components else None,
                          self.description, self.documentation, self.id)
                 db_manager.execute_update(query, params)
             else:
                 # Insert new IP
                 query = """
-                INSERT INTO ips (name, type_id, process_id, flavor, revision, status, provider, 
+                INSERT INTO ips (name, type_id, process_id, revision, status, provider, 
                                ip_components, description, documentation)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                params = (self.name, self.type_id, self.process_id, self.flavor, self.revision,
+                params = (self.name, self.type_id, self.process_id, self.revision,
                          self.status, self.provider, json.dumps(self.ip_components) if self.ip_components else None,
                          self.description, self.documentation)
                 db_manager.execute_update(query, params)

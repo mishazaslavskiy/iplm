@@ -153,7 +153,10 @@ def handle_ip_command(args):
     if args.ip_action == 'list':
         ips = IP.find_all()
         for ip in ips:
-            print(f"{ip.id}: {ip.name} (Status: {ip.status}, Type: {ip.type_id})")
+            process = Process.find_by_id(ip.process_id)
+            type = Type.find_by_id(ip.type_id)
+            print(f"{ip.id}: {ip.name} (Status: {ip.status}, IP Type Path: {type.path}, Process: {process.name})")
+
     elif args.ip_action == 'create':
         name = input("IP name: ")
         type_name = input("Type name: ")

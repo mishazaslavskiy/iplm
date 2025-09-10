@@ -86,7 +86,6 @@ def main():
         revision="2.1",
         status="production",
         provider="ARM Ltd.",
-        flavor="high-performance",
         description="High-performance ARM Cortex-A78 core at 1GHz",
         documentation="https://developer.arm.com/ip-products/processors/cortex-a/cortex-a78"
     )
@@ -103,7 +102,6 @@ def main():
         revision="1.0",
         status="beta",
         provider="SiFive",
-        flavor="low-power",
         description="RISC-V RV64GC core at 800MHz",
         documentation="https://www.sifive.com/cores/risc-v-core-ip"
     )
@@ -119,7 +117,6 @@ def main():
         revision="3.2",
         status="production",
         provider="Synopsys",
-        flavor="high-speed",
         description="DDR4 memory controller supporting up to 3200MHz",
         documentation="https://www.synopsys.com/dw/ipdir.php?ds=dwc_ddr4_controller"
     )

@@ -1,5 +1,11 @@
 -- IPLM Database Setup Script
 -- Run this script in MySQL to create the database and user
+-- Command line:
+-- mysql -u root < setup_database.sql
+
+-- Cleanup existing database and user
+DROP DATABASE IF EXISTS iplm_db;
+DROP USER IF EXISTS 'iplm_user'@'localhost';
 
 -- Create database
 CREATE DATABASE IF NOT EXISTS iplm_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -50,7 +56,6 @@ CREATE TABLE IF NOT EXISTS `ips` (
   `name` VARCHAR(255) NOT NULL UNIQUE,
   `type_id` INT NOT NULL,
   `process_id` INT NOT NULL,
-  `flavor` VARCHAR(100),
   `revision` VARCHAR(50) NOT NULL,
   `status` ENUM('alpha','beta','production','obsolete') NOT NULL,
   `provider` VARCHAR(255) NOT NULL,

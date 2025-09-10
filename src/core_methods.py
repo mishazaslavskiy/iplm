@@ -59,7 +59,6 @@ class IPManager:
                 - provider: Provider name
                 - fab: FAB name
                 - node: Node name
-                - flavor: Flavor name
                 
         Returns:
             List[IP]: List of matching IPs
@@ -105,9 +104,6 @@ class IPManager:
             if 'provider' in criteria:
                 where_conditions.append("i.provider = %s")
                 params.append(criteria['provider'])
-            if 'flavor' in criteria:
-                where_conditions.append("i.flavor = %s")
-                params.append(criteria['flavor'])
             
             # Build final query
             if joins:
@@ -168,7 +164,7 @@ class IPManager:
         
         Args:
             ip_name: Name of the IP to update
-            **updates: Fields to update (name, type_id, process_id, flavor, 
+            **updates: Fields to update (name, type_id, process_id, 
                       revision, status, provider, description, documentation)
             
         Returns:
@@ -181,7 +177,7 @@ class IPManager:
                 return False
             
             # Update allowed fields
-            allowed_fields = ['name', 'type_id', 'process_id', 'flavor', 'revision', 
+            allowed_fields = ['name', 'type_id', 'process_id', 'revision', 
                             'status', 'provider', 'description', 'documentation']
             
             for field, value in updates.items():
