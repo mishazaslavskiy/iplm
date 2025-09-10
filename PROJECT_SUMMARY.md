@@ -55,7 +55,6 @@ ip = IP(
     revision="2.1",
     status="production",
     provider="ARM Ltd.",
-    flavor="high-performance",
     description="High-performance ARM Cortex-A78 core at 1GHz"
 )
 ```

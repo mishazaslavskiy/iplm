@@ -37,7 +37,6 @@ def test_find_builds_query_and_returns_ips(reset_mocks, monkeypatch):
                 "name": "IP_A",
                 "type_id": 10,
                 "process_id": 100,
-                "flavor": "perf",
                 "revision": "1.0",
                 "status": "alpha",
                 "provider": "Prov",
@@ -154,7 +153,6 @@ def test_pack_collects_related(reset_mocks, monkeypatch):
             self.name = name
             self.type_id = 10
             self.process_id = 100
-            self.flavor = ""
             self.revision = "1.0"
             self.status = "production"
             self.provider = ""
@@ -170,7 +168,6 @@ def test_pack_collects_related(reset_mocks, monkeypatch):
                 "name": self.name,
                 "type_id": self.type_id,
                 "process_id": self.process_id,
-                "flavor": self.flavor,
                 "revision": self.revision,
                 "status": self.status,
                 "provider": self.provider,

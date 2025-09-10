@@ -26,7 +26,6 @@ schemas:
       name: "VARCHAR(255) NOT NULL UNIQUE"
       type_id: "INT NOT NULL"
       process_id: "INT NOT NULL"
-      flavor: "VARCHAR(100)"
       revision: "VARCHAR(50) NOT NULL"
       status: "ENUM('alpha', 'beta', 'production', 'obsolete') NOT NULL"
       provider: "VARCHAR(255) NOT NULL"

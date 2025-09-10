@@ -190,7 +190,6 @@ ip_manager.release("ARM_Cortex_A78")
 - **name**: IP name (unique)
 - **type_id**: Reference to Type
 - **process_id**: Reference to Process
-- **flavor**: IP flavor/variant
 - **revision**: Version number
 - **status**: alpha/beta/production/obsolete
 - **provider**: IP provider company
