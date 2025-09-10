@@ -46,6 +46,13 @@ def main():
     ip_subparsers.add_parser('release', help='Release an IP')
     ip_subparsers.add_parser('update', help='Update an IP')
     
+    # IP tree commands
+    tree_parser = ip_subparsers.add_parser('tree', help='Show IP tree structure')
+    tree_parser.add_argument('--ip', help='Show tree for specific IP')
+    tree_parser.add_argument('--process', help='Show trees for all IPs in a process')
+    tree_parser.add_argument('--type', help='Show trees for all IPs of a type')
+    tree_parser.add_argument('--details', action='store_true', help='Show detailed information')
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -251,6 +258,15 @@ def handle_ip_command(args):
             print(f"IP '{name}' updated successfully!")
         else:
             print("Failed to update IP", file=sys.stderr)
+    elif args.ip_action == 'tree':
+        if args.ip:
+            ip_manager.show_ip_tree(ip_name=args.ip, show_details=args.details)
+        elif args.process:
+            ip_manager.show_ip_tree_by_process(process_name=args.process, show_details=args.details)
+        elif args.type:
+            ip_manager.show_ip_tree_by_type(type_name=args.type, show_details=args.details)
+        else:
+            ip_manager.show_ip_tree(show_details=args.details)
 
 if __name__ == "__main__":
     main()

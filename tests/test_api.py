@@ -37,10 +37,10 @@ def test_find_builds_query_and_returns_ips(reset_mocks, monkeypatch):
                 "name": "IP_A",
                 "type_id": 10,
                 "process_id": 100,
+                "parent_ip_id": None,
                 "revision": "1.0",
                 "status": "alpha",
                 "provider": "Prov",
-                "ip_components": None,
                 "description": "",
                 "documentation": "",
                 "created_at": None,
@@ -153,10 +153,10 @@ def test_pack_collects_related(reset_mocks, monkeypatch):
             self.name = name
             self.type_id = 10
             self.process_id = 100
+            self.parent_ip_id = None
             self.revision = "1.0"
             self.status = "production"
             self.provider = ""
-            self.ip_components = []
             self.description = ""
             self.documentation = ""
             self.created_at = None
@@ -168,10 +168,10 @@ def test_pack_collects_related(reset_mocks, monkeypatch):
                 "name": self.name,
                 "type_id": self.type_id,
                 "process_id": self.process_id,
+                "parent_ip_id": self.parent_ip_id,
                 "revision": self.revision,
                 "status": self.status,
                 "provider": self.provider,
-                "ip_components": None,
                 "description": self.description,
                 "documentation": self.documentation,
                 "created_at": self.created_at,
@@ -183,6 +183,12 @@ def test_pack_collects_related(reset_mocks, monkeypatch):
 
         def get_process(self):
             return DummyProcess()
+        
+        def get_parent(self):
+            return None
+        
+        def get_children(self):
+            return []
 
     # Mock ip_manager.find to avoid DB
     monkeypatch.setattr(
@@ -208,3 +214,144 @@ def test_fetch_calls_find_by_name(reset_mocks, monkeypatch):
     obj = ip_manager.fetch("SomeIP")
     assert marker["called"] is True
     assert obj is not None
+
+
+def test_add_child_ip_calls_add_child(reset_mocks, monkeypatch):
+    class DummyParentIP:
+        def add_child(self, child):
+            self.child_added = True
+            return True
+
+    class DummyChildIP:
+        def __init__(self):
+            self.name = "ChildIP"
+
+    parent = DummyParentIP()
+    child = DummyChildIP()
+
+    monkeypatch.setattr(ip_module.IP, "find_by_name", staticmethod(lambda n: parent if n == "ParentIP" else child), raising=True)
+
+    result = ip_manager.add_child_ip("ParentIP", child)
+    assert result is True
+    assert parent.child_added is True
+
+
+def test_remove_child_ip_calls_remove_child(reset_mocks, monkeypatch):
+    class DummyParentIP:
+        def remove_child(self, child):
+            self.child_removed = True
+            return True
+
+    class DummyChildIP:
+        def __init__(self):
+            self.name = "ChildIP"
+
+    parent = DummyParentIP()
+    child = DummyChildIP()
+
+    monkeypatch.setattr(ip_module.IP, "find_by_name", staticmethod(lambda n: parent if n == "ParentIP" else child), raising=True)
+
+    result = ip_manager.remove_child_ip("ParentIP", "ChildIP")
+    assert result is True
+    assert parent.child_removed is True
+
+
+def test_get_ip_hierarchy_builds_tree(reset_mocks, monkeypatch):
+    class DummyType:
+        def __init__(self, name):
+            self.name = name
+
+    class DummyChildIP:
+        def __init__(self, name, id_):
+            self.id = id_
+            self.name = name
+            self.type = DummyType("CPU")
+            self.status = "production"
+
+        def get_type(self):
+            return self.type
+
+        def get_children(self):
+            return []  # No children to avoid recursion
+
+    class DummyIP:
+        def __init__(self, name, id_=1):
+            self.id = id_
+            self.name = name
+            self.type = DummyType("CPU")
+            self.status = "production"
+
+        def get_type(self):
+            return self.type
+
+        def get_children(self):
+            return [DummyChildIP("Child1", 2), DummyChildIP("Child2", 3)]
+
+    dummy_ip = DummyIP("ParentIP")
+    monkeypatch.setattr(ip_module.IP, "find_by_name", staticmethod(lambda n: dummy_ip), raising=True)
+
+    hierarchy = ip_manager.get_ip_hierarchy("ParentIP")
+    assert hierarchy["name"] == "ParentIP"
+    assert hierarchy["type"] == "CPU"
+    assert hierarchy["status"] == "production"
+    assert len(hierarchy["children"]) == 2
+    assert hierarchy["children"][0]["name"] == "Child1"
+    assert hierarchy["children"][1]["name"] == "Child2"
+
+
+def test_show_ip_tree_calls_print_tree(reset_mocks, monkeypatch, capsys):
+    class DummyType:
+        def __init__(self, name):
+            self.name = name
+
+    class DummyIP:
+        def __init__(self, name, id_=1):
+            self.id = id_
+            self.name = name
+            self.type = DummyType("CPU")
+            self.status = "production"
+            self.provider = "TestProvider"
+            self.revision = "1.0"
+            self.description = "Test IP"
+
+        def get_type(self):
+            return self.type
+
+        def get_children(self):
+            return []
+
+    dummy_ip = DummyIP("TestIP")
+    monkeypatch.setattr(ip_module.IP, "find_by_name", staticmethod(lambda n: dummy_ip), raising=True)
+
+    ip_manager.show_ip_tree("TestIP")
+    captured = capsys.readouterr()
+    assert "IP Tree for 'TestIP':" in captured.out
+    assert "├─ TestIP (CPU) - production" in captured.out
+
+
+def test_show_ip_tree_all_roots(reset_mocks, monkeypatch, capsys):
+    class DummyType:
+        def __init__(self, name):
+            self.name = name
+
+    class DummyIP:
+        def __init__(self, name, id_=1):
+            self.id = id_
+            self.name = name
+            self.type = DummyType("CPU")
+            self.status = "production"
+
+        def get_type(self):
+            return self.type
+
+        def get_children(self):
+            return []
+
+    dummy_ips = [DummyIP("Root1"), DummyIP("Root2")]
+    monkeypatch.setattr(ip_module.IP, "find_roots", staticmethod(lambda: dummy_ips), raising=True)
+
+    ip_manager.show_ip_tree()
+    captured = capsys.readouterr()
+    assert "All IP Trees:" in captured.out
+    assert "├─ Root1 (CPU) - production" in captured.out
+    assert "├─ Root2 (CPU) - production" in captured.out

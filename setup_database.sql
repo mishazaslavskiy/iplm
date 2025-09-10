@@ -56,16 +56,17 @@ CREATE TABLE IF NOT EXISTS `ips` (
   `name` VARCHAR(255) NOT NULL UNIQUE,
   `type_id` INT NOT NULL,
   `process_id` INT NOT NULL,
+  `parent_ip_id` INT NULL,
   `revision` VARCHAR(50) NOT NULL,
   `status` ENUM('alpha','beta','production','obsolete') NOT NULL,
   `provider` VARCHAR(255) NOT NULL,
-  `ip_components` JSON,
   `description` TEXT,
   `documentation` TEXT,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `fk_ips_type` FOREIGN KEY (`type_id`) REFERENCES `types`(`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_ips_process` FOREIGN KEY (`process_id`) REFERENCES `processes`(`id`) ON DELETE CASCADE
+  CONSTRAINT `fk_ips_process` FOREIGN KEY (`process_id`) REFERENCES `processes`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ips_parent` FOREIGN KEY (`parent_ip_id`) REFERENCES `ips`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Show success message

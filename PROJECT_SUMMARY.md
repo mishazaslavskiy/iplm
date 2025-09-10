@@ -46,20 +46,63 @@ cpu_type = Type(name="CPU", parent_id=digital_type.id, description="CPU cores")
 arm_type = Type(name="ARM", parent_id=cpu_type.id, description="ARM processor cores")
 ```
 
-### 3. IP Management
+### 3. IP Management with Hierarchical Structure
 ```python
-ip = IP(
-    name="ARM_Cortex_A78_1GHz",
-    type_id=arm_type.id,
-    process_id=process.id,
+# Top-level SoC
+soc_ip = IP(
+    name="TSMC_7nm_SoC_v1.0",
+    type_id=digital_type.id,
+    process_id=tsmc_process.id,
+    revision="1.0",
+    status="production",
+    provider="TSMC",
+    description="Complete 7nm SoC with multiple subsystems"
+)
+
+# CPU subsystem (child of SoC)
+cpu_subsystem = IP(
+    name="CPU_Subsystem",
+    type_id=processor_type.id,
+    process_id=tsmc_process.id,
     revision="2.1",
     status="production",
-    provider="ARM Ltd.",
-    description="High-performance ARM Cortex-A78 core at 1GHz"
+    provider="TSMC",
+    description="CPU subsystem containing multiple processor cores"
 )
+soc_ip.add_child(cpu_subsystem)
+
+# Individual processor cores (children of CPU subsystem)
+riscv_core = IP(
+    name="RISC-V_RV64GC_2GHz",
+    type_id=riscv_type.id,
+    process_id=tsmc_process.id,
+    revision="1.2",
+    status="production",
+    provider="SiFive",
+    description="High-performance RISC-V RV64GC core at 2GHz"
+)
+cpu_subsystem.add_child(riscv_core)
 ```
 
-### 4. Advanced Search Capabilities
+### 4. Hierarchical IP Operations
+```python
+# Get IP hierarchy
+hierarchy = ip_manager.get_ip_hierarchy("TSMC_7nm_SoC_v1.0")
+
+# Add child IPs
+ip_manager.add_child_ip("CPU_Subsystem", riscv_core)
+
+# Remove child IPs
+ip_manager.remove_child_ip("CPU_Subsystem", "RISC-V_RV64GC_2GHz")
+
+# Get all descendants
+descendants = soc_ip.get_all_descendants()
+
+# Find root IPs
+root_ips = IP.find_roots()
+```
+
+### 5. Advanced Search Capabilities
 ```python
 # Find by status
 production_ips = ip_manager.find(status="production")

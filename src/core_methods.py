@@ -197,35 +197,236 @@ class IPManager:
             logger.error(f"Error updating IP '{ip_name}': {e}")
             return False
     
-    def update_ip_components(self, ip_name: str, components: List[Dict[str, Any]]) -> bool:
+    def add_child_ip(self, parent_ip_name: str, child_ip: IP) -> bool:
         """
-        Update IP components
+        Add a child IP to a parent IP
         
         Args:
-            ip_name: Name of the IP to update
-            components: List of component dictionaries
+            parent_ip_name: Name of the parent IP
+            child_ip: Child IP object to add
             
         Returns:
             bool: True if successful, False otherwise
         """
         try:
-            ip = IP.find_by_name(ip_name)
-            if not ip:
-                logger.error(f"IP '{ip_name}' not found")
+            parent_ip = IP.find_by_name(parent_ip_name)
+            if not parent_ip:
+                logger.error(f"Parent IP '{parent_ip_name}' not found")
                 return False
             
-            ip.ip_components = components
-            success = ip.save()
-            
+            success = parent_ip.add_child(child_ip)
             if success:
-                logger.info(f"IP components for '{ip_name}' updated successfully")
+                logger.info(f"Child IP '{child_ip.name}' added to '{parent_ip_name}' successfully")
             else:
-                logger.error(f"Failed to update IP components for '{ip_name}'")
+                logger.error(f"Failed to add child IP '{child_ip.name}' to '{parent_ip_name}'")
             
             return success
         except Exception as e:
-            logger.error(f"Error updating IP components for '{ip_name}': {e}")
+            logger.error(f"Error adding child IP to '{parent_ip_name}': {e}")
             return False
+    
+    def remove_child_ip(self, parent_ip_name: str, child_ip_name: str) -> bool:
+        """
+        Remove a child IP from a parent IP
+        
+        Args:
+            parent_ip_name: Name of the parent IP
+            child_ip_name: Name of the child IP to remove
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            parent_ip = IP.find_by_name(parent_ip_name)
+            child_ip = IP.find_by_name(child_ip_name)
+            
+            if not parent_ip:
+                logger.error(f"Parent IP '{parent_ip_name}' not found")
+                return False
+            if not child_ip:
+                logger.error(f"Child IP '{child_ip_name}' not found")
+                return False
+            
+            success = parent_ip.remove_child(child_ip)
+            if success:
+                logger.info(f"Child IP '{child_ip_name}' removed from '{parent_ip_name}' successfully")
+            else:
+                logger.error(f"Failed to remove child IP '{child_ip_name}' from '{parent_ip_name}'")
+            
+            return success
+        except Exception as e:
+            logger.error(f"Error removing child IP from '{parent_ip_name}': {e}")
+            return False
+    
+    def get_ip_hierarchy(self, ip_name: str) -> Dict[str, Any]:
+        """
+        Get the complete hierarchy for an IP
+        
+        Args:
+            ip_name: Name of the IP to get hierarchy for
+            
+        Returns:
+            Dict containing the IP hierarchy
+        """
+        try:
+            ip = IP.find_by_name(ip_name)
+            if not ip:
+                logger.error(f"IP '{ip_name}' not found")
+                return {}
+            
+            def build_hierarchy(ip_obj):
+                hierarchy = {
+                    'id': ip_obj.id,
+                    'name': ip_obj.name,
+                    'type': ip_obj.get_type().name if ip_obj.get_type() else 'Unknown',
+                    'status': ip_obj.status,
+                    'children': []
+                }
+                
+                children = ip_obj.get_children()
+                for child in children:
+                    hierarchy['children'].append(build_hierarchy(child))
+                
+                return hierarchy
+            
+            return build_hierarchy(ip)
+        except Exception as e:
+            logger.error(f"Error getting IP hierarchy for '{ip_name}': {e}")
+            return {}
+    
+    def show_ip_tree(self, ip_name: str = None, show_details: bool = False) -> None:
+        """
+        Display IP tree structure in a formatted way
+        
+        Args:
+            ip_name: Name of the IP to show tree for. If None, shows all root IPs
+            show_details: Whether to show additional details (provider, revision, etc.)
+        """
+        try:
+            if ip_name:
+                ip = IP.find_by_name(ip_name)
+                if not ip:
+                    print(f"IP '{ip_name}' not found")
+                    return
+                print(f"IP Tree for '{ip_name}':")
+                print("=" * 50)
+                self._print_ip_tree(ip, 0, show_details)
+            else:
+                root_ips = IP.find_roots()
+                if not root_ips:
+                    print("No root IPs found")
+                    return
+                print("All IP Trees:")
+                print("=" * 50)
+                for ip in root_ips:
+                    self._print_ip_tree(ip, 0, show_details)
+                    print()  # Add blank line between trees
+        except Exception as e:
+            logger.error(f"Error showing IP tree: {e}")
+            print(f"Error showing IP tree: {e}")
+    
+    def _print_ip_tree(self, ip: IP, level: int = 0, show_details: bool = False) -> None:
+        """
+        Internal method to print IP tree structure
+        
+        Args:
+            ip: IP object to print
+            level: Current indentation level
+            show_details: Whether to show additional details
+        """
+        indent = "  " * level
+        type_obj = ip.get_type()
+        type_name = type_obj.name if type_obj else 'Unknown'
+        
+        if show_details:
+            process = ip.get_process()
+            process_name = process.name if process else 'Unknown'
+            print(f"{indent}├─ {ip.name}")
+            print(f"{indent}   Type: {type_name}")
+            print(f"{indent}   Status: {ip.status}")
+            print(f"{indent}   Provider: {ip.provider}")
+            print(f"{indent}   Revision: {ip.revision}")
+            print(f"{indent}   Process: {process_name}")
+            if ip.description:
+                print(f"{indent}   Description: {ip.description}")
+        else:
+            print(f"{indent}├─ {ip.name} ({type_name}) - {ip.status}")
+        
+        children = ip.get_children()
+        for child in children:
+            self._print_ip_tree(child, level + 1, show_details)
+    
+    def show_ip_tree_by_process(self, process_name: str, show_details: bool = False) -> None:
+        """
+        Display IP trees for all IPs in a specific process
+        
+        Args:
+            process_name: Name of the process
+            show_details: Whether to show additional details
+        """
+        try:
+            process = Process.find_by_name(process_name)
+            if not process:
+                print(f"Process '{process_name}' not found")
+                return
+            
+            # Get all IPs for this process
+            ips = IP.find_by_process(process.id)
+            if not ips:
+                print(f"No IPs found for process '{process_name}'")
+                return
+            
+            # Find root IPs (IPs without parents) in this process
+            root_ips = [ip for ip in ips if ip.parent_ip_id is None]
+            
+            if not root_ips:
+                print(f"No root IPs found for process '{process_name}'")
+                return
+            
+            print(f"IP Trees for Process '{process_name}':")
+            print("=" * 50)
+            for ip in root_ips:
+                self._print_ip_tree(ip, 0, show_details)
+                print()  # Add blank line between trees
+        except Exception as e:
+            logger.error(f"Error showing IP tree by process: {e}")
+            print(f"Error showing IP tree by process: {e}")
+    
+    def show_ip_tree_by_type(self, type_name: str, show_details: bool = False) -> None:
+        """
+        Display IP trees for all IPs of a specific type
+        
+        Args:
+            type_name: Name of the type
+            show_details: Whether to show additional details
+        """
+        try:
+            type_obj = Type.find_by_name(type_name)
+            if not type_obj:
+                print(f"Type '{type_name}' not found")
+                return
+            
+            # Get all IPs of this type
+            ips = IP.find_by_type(type_obj.id)
+            if not ips:
+                print(f"No IPs found for type '{type_name}'")
+                return
+            
+            # Find root IPs (IPs without parents) of this type
+            root_ips = [ip for ip in ips if ip.parent_ip_id is None]
+            
+            if not root_ips:
+                print(f"No root IPs found for type '{type_name}'")
+                return
+            
+            print(f"IP Trees for Type '{type_name}':")
+            print("=" * 50)
+            for ip in root_ips:
+                self._print_ip_tree(ip, 0, show_details)
+                print()  # Add blank line between trees
+        except Exception as e:
+            logger.error(f"Error showing IP tree by type: {e}")
+            print(f"Error showing IP tree by type: {e}")
     
     def change_schema(self, schema_name: str, new_schema: Dict[str, Any]) -> bool:
         """
@@ -299,6 +500,8 @@ class IPManager:
                 # Add related data
                 ip_data['type'] = ip.get_type().to_dict() if ip.get_type() else None
                 ip_data['process'] = ip.get_process().to_dict() if ip.get_process() else None
+                ip_data['parent'] = ip.get_parent().to_dict() if ip.get_parent() else None
+                ip_data['children'] = [child.to_dict() for child in ip.get_children()]
                 packed_data['ips'].append(ip_data)
             
             logger.info(f"Packed {len(ips)} IPs successfully")

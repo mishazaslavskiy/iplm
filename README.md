@@ -1,16 +1,16 @@
 # IPLM - IP Management System
 
-A comprehensive IP (Intellectual Property) management system built with Python and MySQL, designed for managing IP cores, processes, and hierarchical type classification in semiconductor design workflows.
+A draft of IP (Intellectual Property) management system built with Python and MySQL, designed for managing IP cores, processes, and hierarchical type classification in semiconductor design workflows.
 
 ## Features
 
 - **Process Management**: Track semiconductor processes with node, FAB, and description information
-- **IP Management**: Comprehensive IP tracking with status, revision, provider, and component details
+- **IP Management**: IP tracking with status, revision, provider, and component details
 - **Type Classification**: Tree-structured IP type classification system
 - **Database Integration**: MySQL database with configurable schemas
 - **Core Operations**: Release, Find, Update, and Schema change capabilities
 - **CLI Interface**: Command-line interface for all operations
-- **Object-Oriented Design**: Clean, extensible Python classes
+- **Object-Oriented Design**: Extensible Python classes
 
 ## Project Structure
 
@@ -193,7 +193,7 @@ ip_manager.release("ARM_Cortex_A78")
 - **revision**: Version number
 - **status**: alpha/beta/production/obsolete
 - **provider**: IP provider company
-- **ip_components**: JSON list of IP components
+- **parent_ip_id**: Reference to parent IP (for hierarchical structure)
 - **description**: IP description
 - **documentation**: Documentation URL
 
@@ -228,6 +228,25 @@ ips = ip_manager.find(process_name="SoC_Design_v1")
 ips = ip_manager.find_by_type_tree("Digital", include_descendants=True)
 ```
 
+### Tree Visualization
+Display IP hierarchies in tree format:
+```python
+# Show all IP trees
+ip_manager.show_ip_tree()
+
+# Show tree for specific IP
+ip_manager.show_ip_tree(ip_name="TSMC_7nm_SoC_v1.0")
+
+# Show detailed tree with additional information
+ip_manager.show_ip_tree(ip_name="TSMC_7nm_SoC_v1.0", show_details=True)
+
+# Show trees by process
+ip_manager.show_ip_tree_by_process("TSMC_7nm_SoC_Design")
+
+# Show trees by type
+ip_manager.show_ip_tree_by_type("Processor")
+```
+
 ### Update
 Update IP properties:
 ```python
@@ -253,6 +272,49 @@ This will demonstrate:
 - Creating and managing IPs
 - Finding and updating IPs
 - Packing IPs for export
+
+## Command Line Interface
+
+The system includes a comprehensive CLI for all operations:
+
+### IP Tree Commands
+```bash
+# Show all IP trees
+python -m src.cli ip tree
+
+# Show tree for specific IP
+python -m src.cli ip tree --ip "TSMC_7nm_SoC_v1.0"
+
+# Show detailed tree
+python -m src.cli ip tree --ip "TSMC_7nm_SoC_v1.0" --details
+
+# Show trees by process
+python -m src.cli ip tree --process "TSMC_7nm_SoC_Design"
+
+# Show trees by type
+python -m src.cli ip tree --type "Processor"
+```
+
+### Other Commands
+```bash
+# Database operations
+python -m src.cli db init
+python -m src.cli db status
+
+# Process operations
+python -m src.cli process list
+python -m src.cli process create
+
+# Type operations
+python -m src.cli type list
+python -m src.cli type tree
+
+# IP operations
+python -m src.cli ip list
+python -m src.cli ip create
+python -m src.cli ip find
+python -m src.cli ip release
+```
 
 ## Database Schema
 
