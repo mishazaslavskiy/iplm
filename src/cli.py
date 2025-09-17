@@ -69,7 +69,7 @@ def main():
         elif args.command == 'ip':
             handle_ip_command(args)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        print(f"Error of type {type(e)}: {e}", file=sys.stderr)
         sys.exit(1)
 
 def handle_db_command(args):
@@ -172,17 +172,15 @@ def handle_ip_command(args):
         status = input("Status (alpha/beta/production/obsolete, default: alpha): ") or "alpha"
         provider = input("Provider: ")
         description = input("Description (optional): ")
-        
+
         # Find type and process
         type_obj = Type.find_by_name(type_name)
         process = Process.find_by_name(process_name)
         
         if not type_obj:
-            print("Type not found", file=sys.stderr)
-            return
+            raise ValueError("Type not found")
         if not process:
-            print("Process not found", file=sys.stderr)
-            return
+            raise ValueError("Process not found")
         
         ip = IP(
             name=name,
